@@ -1,0 +1,14 @@
+
+.vscode/
+.ipynb_checkpoints/
+__pycache__
+
+
+*.tar.gz
+
+# datasets
+cifar-10-batches-py/
+mnist_png/
+
+# models
+*.pth
