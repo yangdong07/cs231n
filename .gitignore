@@ -4,11 +4,15 @@
 __pycache__
 
 
+*.zip
 *.tar.gz
 
 # datasets
 cifar-10-batches-py/
 mnist_png/
+coco_captioning/
 
 # models
 *.pth
+*.npz
+*.h5
