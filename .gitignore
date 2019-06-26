@@ -16,3 +16,4 @@ coco_captioning/
 *.pth
 *.npz
 *.h5
+squeezenet*
