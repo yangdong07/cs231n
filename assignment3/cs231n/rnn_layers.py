@@ -289,8 +289,20 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     # You may want to use the numerically stable sigmoid implementation above.  #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N, H = prev_h.shape
 
-    pass
+    a = x.dot(Wx) + prev_h.dot(Wh) + b
+    a_split = np.hsplit(a, 4)
+    i = sigmoid(a_split[0])
+    f = sigmoid(a_split[1])
+    o = sigmoid(a_split[2])
+    g = np.tanh(a_split[3])
+
+    next_c = f * prev_c + i * g
+    tanhc = np.tanh(next_c)
+    next_h = o * tanhc
+
+    cache = (x, prev_h, prev_c, Wx, Wh, i, f, o, g, tanhc)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -325,8 +337,31 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     # the output value from the nonlinearity.                                   #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N, H = dnext_h.shape
 
-    pass
+    x, prev_h, prev_c, Wx, Wh, i, f, o, g, tanhc = cache
+
+    dct = (1 - tanhc * tanhc) * o * dnext_h + dnext_c
+
+    di = g * dct
+    dg = i * dct
+    df = prev_c * dct
+    do = tanhc * dnext_h
+
+    dprev_c = f * dct
+
+    dz = np.hstack([
+      i * (1 - i) * di,
+      f * (1 - f) * df,
+      o * (1 - o) * do,
+      (1 - g * g) * dg,
+    ])
+
+    db = dz.sum(axis=0)
+    dx = dz.dot(Wx.T)
+    dprev_h = dz.dot(Wh.T)
+    dWx = x.T.dot(dz)
+    dWh = prev_h.T.dot(dz)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -358,24 +393,32 @@ def lstm_forward(x, h0, Wx, Wh, b):
     - h: Hidden states for all timesteps of all sequences, of shape (N, T, H)
     - cache: Values needed for the backward pass.
     """
-    h, cache = None, None
+    # h, caches = [], []
     #############################################################################
     # TODO: Implement the forward pass for an LSTM over an entire timeseries.   #
     # You should use the lstm_step_forward function that you just defined.      #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    hs, caches = [], []
 
-    pass
+    N, T, D = x.shape
+    h = h0
+    c = np.zeros_like(h0)
+    hs = list()
+    for t in range(T):
+      h, c, cache = lstm_step_forward(x[:, t, :], h, c, Wx, Wh, b)
+      hs.append(h)
+      caches.append(cache)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
 
-    return h, cache
+    return np.stack(hs, axis=1), caches
 
 
-def lstm_backward(dh, cache):
+def lstm_backward(dh, caches):
     """
     Backward pass for an LSTM over an entire sequence of data.]
 
@@ -396,8 +439,28 @@ def lstm_backward(dh, cache):
     # You should use the lstm_step_backward function that you just defined.     #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N, T, H = dh.shape
 
-    pass
+    dxs = []
+    dWxs = []
+    dWhs = []
+    dbs = []
+
+    dh0 = np.zeros((N, H))
+    dc = np.zeros((N, H))
+
+    for t in range(T - 1, -1, -1):
+      dh0 += dh[:, t, :]
+      dx, dh0, dc, dWx, dWh, db = lstm_step_backward(dh0, dc, caches[t])
+      dxs.append(dx)
+      dWxs.append(dWx)
+      dWhs.append(dWh)
+      dbs.append(db)
+
+    dWx = np.sum(np.flip(dWxs, axis=0), axis=0)
+    dWh = np.sum(np.flip(dWhs, axis=0), axis=0)
+    db = np.sum(np.flip(dbs, axis=0), axis=0)
+    dx = np.stack(np.flip(dxs, axis=0), axis=1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
