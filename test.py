@@ -23,3 +23,5 @@ import torch.nn as nn
 import torchvision.models as models
 
 alexnet = models.alexnet()
+
+model = torchvision.models.squeezenet1_1(pretrained=True)

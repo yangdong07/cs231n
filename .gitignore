@@ -9,6 +9,7 @@ __pycache__
 
 # datasets
 cifar-10-batches-py/
+datasets/MNIST_data/
 mnist_png/
 coco_captioning/
 
